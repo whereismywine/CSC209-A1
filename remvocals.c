@@ -4,19 +4,22 @@
 int main(int argc, char *argv[]){
     if (argc != 3){
         // add err msg
+        perror("Not enough arguments for program to run!");
         return EXIT_FAILURE;
     }
 
     FILE *srcFile = fopen(argv[1], "rb");
-    if (!srcFile) {
+    if (srcFile == NULL) {
         // add error msg
+        perror("Had trouble opening the file");
         return EXIT_FAILURE;
     }
 
     FILE *dstFile = fopen(argv[2], "wb");
-    if (!dstFile) {
+    if (dstFile == NULL) {
         // add err msg
-        fclose(dstFile);
+        perror("Had trouble creating a destination file");
+        fclose(dstFile); 
         return EXIT_FAILURE;
     }  
 
@@ -44,9 +47,11 @@ int main(int argc, char *argv[]){
         fwrite(&combined, sizeof(short), 1, dstFile);
     }
 
+    printf("Vocals removed successfully");
+
     fclose(srcFile);
     fclose(dstFile);
 
-    return EXIT_SUCCESS;
+    return EXIT_SUCCESS; 
 
 }
