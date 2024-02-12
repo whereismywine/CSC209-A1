@@ -1,0 +1,50 @@
+addecho                    Man Page                   addecho 
+
+
+NAME
+    addecho - add echo to mono wav sound file
+
+SYNOPSIS
+	addecho [-d num] [-v num] [sourcewav file] [destwav file]
+
+
+DESCRIPTION
+	The addecho utility creates an echo in a provided mono wav sound file by mixing the original sound with a copy of itself.
+
+	This utility can handle large sound files through using an echo buffer to forego loading two copies of the sourcewav file into memory.
+	The echo buffer contains a number of volume scaled samples of the original sound. The factor by which the sounds in the echo 
+	buffer are scaled is specified by the -v parameter. The size of the echo buffer is specified by the -d parameter. 
+	 
+	The output of the utility is written in three stages. In the first [-d] samples of the original sound, the echo buffer is
+	not used and the samples of the original sound are written to the output sound. In the remaining samples of the original sound 
+	the written samples are obtained by adding the original sound samples to the scaled up samples in the echo buffer. Next, when 
+	there are no more samples of the original sound we write 0 samples, the number of which is determined by the difference between -d 
+	and the number of samples in the original sound. Finally, we write the rest of the samples in the echo buffer to the output sound.
+
+	The following options are available:
+		
+	-d 	Sample delay size, this determines the size of the echo buffer and also the delay in our output audio, the default value is 8000.
+	-v 	Volume scale factor, this determines the factor by which we scale samples in the echo buffer which mix into
+		our original sample. This option determines the volume of the echo. The default value is 4.
+
+RETURN VALUES
+     addecho returns an exit value 0 if the task is completed successfully, and 1 if an error or issue is encountered.
+
+EXAMPLES
+     	./addecho short.wav short_new.wav
+	This produces a new wav file called short_new.wav an echo that is delayed by 8000 samples and volume scaled by a factor of 4.
+
+		./addecho -d 20000 -v 2 door.wav door_20000_2.wav
+	This produces a new wav file door_20000_2.wav with an echo that is delayed by 20000 samples and volume scaled by a factor of 2.
+
+
+WARNINGS
+	The -v and -d parameters do not accept negative values because the volume cannot be scaled to a negative value and
+	the audio cannot be delayed by negative samples.
+
+	This utility does not accept more than 2 files as arguments. If more than 2 files, namely the sourcewav and destwav files are
+	specified then the program will not execute.
+	
+
+BUGS
+	This program is extensively tested and bug-free.
