@@ -47,3 +47,25 @@ then
     echo "testcase: short [-d = 3], [-v = 2] >> PASSED"
     rm test_output.txt
 fi
+
+echo "testcase: delay = -3, volume = -2  [./addecho -d -3 -v -2 door.wav door2.wav]";
+./addecho -d -3 -v -2 door.wav door2.wav 2> error.txt;
+cat error.txt;
+echo;
+rm error.txt;
+
+echo "testcase: delay = 3, volume = -10  [./addecho -d 3 -v -10 door.wav door2.wav]";
+./addecho -d 3 -v -10 door.wav door2.wav 2> error.txt;
+cat error.txt;
+echo;
+rm error.txt;
+
+echo "testcase: delay = -3, volume = 5  [./addecho -d -3 -v 5 door.wav door2.wav]";
+./addecho -d -3 -v 5 door.wav door2.wav 2> error.txt;
+cat error.txt;
+echo;
+
+echo "testcase: 3 arguments [./addecho -d 3 -v 3 -k 3 door.wav door2.wav]";
+./addecho -d 3 -v 3 -k 3 door.wav door2.wav door3.wav 2> error.txt;
+cat error.txt;
+echo;
