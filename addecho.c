@@ -1,25 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h> 
+#include <string.h>
 
 #define DEFAULT_DELAY 8000
-#define DEFAULT_VOLUME 4
-#define HEADER_SIZE 22
-
-// void addecho(int delay, int volume_scale, FILE *sourceFile, FILE *destFile);
-  // -- not sure if this is needed or not -- 
-//  
+#define DEFAULT_VOLUME_SCALE 4.0
+#define HEADER_SIZE 44 
 
 int main(int argc, char *argv[]) {
     int delay = DEFAULT_DELAY;
-    float volume_scale = DEFAULT_VOLUME;
+    float volume_scale = DEFAULT_VOLUME_SCALE;
     int opt;
 
-    // using getopt(): parses command line - returns -1 if no more options are present
-    // ^ always runs in a loop
-
-    // Parse command-line arguments
+    // parse the command-line arguments
     while ((opt = getopt(argc, argv, "d:v:")) != -1) {
         switch (opt) {
             case 'd':
@@ -44,56 +37,74 @@ int main(int argc, char *argv[]) {
 
     // check if the command is valid
     if (argc - optind < 2) {
-        fprintf(stderr, "Missing source or destination file arguments\n");
-        return EXIT_FAILURE;
+        fprintf(stderr, "Missing source or destination WAV file.\n");
+        exit(EXIT_FAILURE);
     }
-
     // open files
     FILE *srcFile = fopen(argv[optind], "rb");
-    FILE *dstFile = fopen(argv[optind + 1], "wb");
-    if (srcFile == NULL || dstFile == NULL) {
+    FILE *destFile = fopen(argv[optind + 1], "wb");
+    if (!srcFile || !destFile) {
         perror("Failed to open files");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
-    // writing the header 
-    short header[HEADER_SIZE];
-    if (fread(header, sizeof(short), HEADER_SIZE, srcFile) != HEADER_SIZE) {
+    // read and adjust WAV header
+    unsigned char header[HEADER_SIZE];
+    if (fread(header, 1, HEADER_SIZE, srcFile) != HEADER_SIZE) {
         fprintf(stderr, "Error reading WAV header\n");
         fclose(srcFile);
-        fclose(dstFile);
-        return EXIT_FAILURE;
+        fclose(destFile);
+        exit(EXIT_FAILURE);
     }
 
-    // adjust the size fields in the header
-    unsigned int* fileSizeField = (unsigned int*)(header + 2); // byte 4, which is short index 2
-    *fileSizeField += delay * 2;
+    unsigned int *fileSizeField = (unsigned int *)(header + 4); 
+    unsigned int *dataChunkSizeField = (unsigned int *)(header + 40); 
 
-    unsigned int* dataChunkSizeField = (unsigned int*)(header + 20); //byte 40, which is short index 20
+    // adjust file size for echo
+    *fileSizeField += delay * 2; 
     *dataChunkSizeField += delay * 2;
+    fwrite(header, 1, HEADER_SIZE, destFile);
 
-    // write header to dstFile
-    if (fwrite(header, sizeof(short), HEADER_SIZE, dstFile) != HEADER_SIZE) {
-        fprintf(stderr, "Failed to write adjusted WAV header\n");
-        fclose(srcFile);
-        fclose(dstFile);
-        return EXIT_FAILURE;
-    }
-
-    // the echo buffer creation
+    // prepare echo buffer
     short *echoBuffer = (short *)malloc(delay * sizeof(short));
     if (echoBuffer == NULL) {
         perror("error with allocation for echo buffer");
         fclose(srcFile);
-        fclose(dstFile);
-        return EXIT_FAILURE;
+        fclose(destFile);
+        exit(EXIT_FAILURE);
     }
     memset(echoBuffer, 0, delay * sizeof(short));
 
-    // the echo stuff here
+    size_t samplesRead, samplesWritten;
+    short sample, echoSample;
+    int bufferIndex = 0;
 
+    // mixing original and echo samples
+    while ((samplesRead = fread(&sample, sizeof(short), 1, srcFile)) == 1) {
+        echoSample = echoBuffer[bufferIndex];
+        short mixedSample = sample + (short)(echoSample / volume_scale);
+        echoBuffer[bufferIndex] = sample;
+        bufferIndex = (bufferIndex + 1) % delay;
+        samplesWritten = fwrite(&mixedSample, sizeof(short), 1, destFile);
+        if (samplesWritten != 1) {
+            perror("Failed to write sample");
+            free(echoBuffer);
+            fclose(srcFile);
+            fclose(destFile);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // write remaining echo
+    for (int i = 0; i < delay; ++i) {
+        echoSample = echoBuffer[(bufferIndex + i) % delay] / volume_scale;
+        fwrite(&echoSample, sizeof(short), 1, destFile);
+    }
+
+    
     // end of program
+    free(echoBuffer);
     fclose(srcFile);
-    fclose(dstFile);
-    return EXIT_SUCCESS;
+    fclose(destFile);
+    return 0;
 }
