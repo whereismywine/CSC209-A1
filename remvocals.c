@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
         fwrite(&byte, 1, 1, dstFile); 
     }
 
-    //TODO: add error handling for if the file isnt 44 bytes, other errors
+
 
     // the seqwuence of shorts, and the math
     short left, right, combined;
